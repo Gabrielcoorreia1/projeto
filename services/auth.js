@@ -16,12 +16,8 @@ export async function entrar(email, senha) {
   if (error) throw error
 }
 
-export async function cadastrar(nome, email, senha) {
-  const { data, error } = await api.auth.signUp({
-    email,
-    password: senha,
-    options: { data: { nome } },
-  })
+export async function cadastrar(email, senha) {
+  const { data, error } = await api.auth.signUp({ email, password: senha })
   if (error) throw error
   return data.session
 }

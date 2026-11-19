@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react'
 import * as auth from '../services/auth'
-import * as perfisService from '../services/perfis'
 import * as projetosService from '../services/projetos'
 import * as tarefasService from '../services/tarefas'
 
@@ -30,7 +29,6 @@ export default function Home() {
 
 function Login() {
   const [criando, setCriando] = useState(false)
-  const [nome, setNome] = useState('')
   const [email, setEmail] = useState('')
   const [senha, setSenha] = useState('')
   const [msg, setMsg] = useState('')
@@ -40,7 +38,7 @@ function Login() {
     setMsg('')
     try {
       if (!criando) return await auth.entrar(email, senha)
-      const session = await auth.cadastrar(nome, email, senha)
+      const session = await auth.cadastrar(email, senha)
       if (!session) setMsg('Conta criada! Confirme pelo link enviado ao seu e-mail.')
     } catch (err) {
       setMsg(err.message)
@@ -50,9 +48,6 @@ function Login() {
   return (
     <div className="card">
       <form onSubmit={enviar} className="coluna">
-        {criando && (
-          <input type="text" placeholder="Seu nome" value={nome} onChange={(e) => setNome(e.target.value)} required />
-        )}
         <input type="email" placeholder="E-mail" value={email} onChange={(e) => setEmail(e.target.value)} required />
         <input
           type="password"
@@ -73,7 +68,6 @@ function Login() {
 }
 
 function Painel({ user }) {
-  const [perfil, setPerfil] = useState(null)
   const [projetos, setProjetos] = useState([])
   const [tarefas, setTarefas] = useState([])
   const [novoProjeto, setNovoProjeto] = useState('')
@@ -82,9 +76,8 @@ function Painel({ user }) {
   const [erro, setErro] = useState('')
 
   useEffect(() => {
-    Promise.all([perfisService.buscar(user.id), projetosService.listar(), tarefasService.listar()])
-      .then(([p, pr, t]) => {
-        setPerfil(p)
+    Promise.all([projetosService.listar(), tarefasService.listar()])
+      .then(([pr, t]) => {
         setProjetos(pr)
         setTarefas(t)
       })
@@ -136,15 +129,10 @@ function Painel({ user }) {
     }
   }
 
-  // papel do app (coluna em perfis), não a role do Postgres
-  const ehAdmin = perfil?.papel === 'admin'
-
   return (
     <>
       <div className="topo">
-        <span>
-          Olá, {perfil?.nome || user.email} {ehAdmin && <small className="tag">admin</small>}
-        </span>
+        <span>Olá, {user.email}</span>
         <button type="button" className="link" onClick={() => auth.sair().catch((err) => setErro(err.message))}>
           Sair
         </button>
@@ -178,25 +166,18 @@ function Painel({ user }) {
         {!erro && tarefas.length === 0 && <p className="msg">Nenhuma tarefa ainda.</p>}
 
         <ul>
-          {tarefas.map((t) => {
-            // admin enxerga tarefas dos outros, mas só pode mexer nas próprias
-            const minha = t.user_id === user.id
-            return (
-              <li key={t.id} className={t.concluida ? 'feita' : ''}>
-                <label>
-                  <input type="checkbox" checked={t.concluida} onChange={() => alternar(t)} disabled={!minha} />
-                  <span>{t.titulo}</span>
-                  {!minha && <small className="tag">outro usuário</small>}
-                  {t.projetos && <small className="tag">{t.projetos.nome}</small>}
-                </label>
-                {minha && (
-                  <button type="button" className="apagar" onClick={() => apagar(t)} aria-label={`Apagar ${t.titulo}`}>
-                    ✕
-                  </button>
-                )}
-              </li>
-            )
-          })}
+          {tarefas.map((t) => (
+            <li key={t.id} className={t.concluida ? 'feita' : ''}>
+              <label>
+                <input type="checkbox" checked={t.concluida} onChange={() => alternar(t)} />
+                <span>{t.titulo}</span>
+                {t.projetos && <small className="tag">{t.projetos.nome}</small>}
+              </label>
+              <button type="button" className="apagar" onClick={() => apagar(t)} aria-label={`Apagar ${t.titulo}`}>
+                ✕
+              </button>
+            </li>
+          ))}
         </ul>
       </div>
     </>
